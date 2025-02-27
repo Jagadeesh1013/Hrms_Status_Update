@@ -24,7 +24,6 @@ public class HrmsStatusUpdate {
 	private String fileId;
 	private String pdfFileName;
 	private String pdfFileNameStatus;
-	private String jsonGenerationStatus;
 	private LocalDateTime jsonSentDate;
 	private String hrmsReceivedStatus;
 	private LocalDateTime hrmsReceivedDate;
@@ -102,14 +101,6 @@ public class HrmsStatusUpdate {
 
 	public void setPdfFileNameStatus(String pdfFileNameStatus) {
 		this.pdfFileNameStatus = pdfFileNameStatus;
-	}
-
-	public String getJsonGenerationStatus() {
-		return jsonGenerationStatus;
-	}
-
-	public void setJsonGenerationStatus(String jsonGenerationStatus) {
-		this.jsonGenerationStatus = jsonGenerationStatus;
 	}
 
 	public LocalDateTime getJsonSentDate() {

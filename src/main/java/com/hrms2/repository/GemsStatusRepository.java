@@ -1,0 +1,26 @@
+package com.hrms2.repository;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+import javax.transaction.Transactional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import com.hrms2.entity.HrmsStatusUpdate;
+
+@Repository
+public interface GemsStatusRepository extends JpaRepository<HrmsStatusUpdate, Long> {
+
+	boolean existsByGeNumberAndEventIdAndFileIdAndPdfFileNameAndPdfFileNameStatus(String geNumber, String eventId,
+			String fileId, String pdfFileName, String pdfFileNameStatus);
+
+	@Modifying
+	@Transactional
+	@Query("UPDATE HrmsStatusUpdate h SET h.jsonSentDate = :jsonSentDate WHERE h.fileId IN :fileIds")
+	void updateJsonSentDate(@Param("fileIds") List<String> fileIds, @Param("jsonSentDate") LocalDateTime jsonSentDate);
+}
