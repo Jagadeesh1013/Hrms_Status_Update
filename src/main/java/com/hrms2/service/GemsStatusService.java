@@ -3,6 +3,7 @@ package com.hrms2.service;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -50,7 +51,7 @@ public class GemsStatusService {
 			String hrmsSftpJsonPath = rootNodeMain.get("hrmsSftpJsonPath").asText();
 
 			// Extract transactionId and gemsId
-			String transactionId = rootNode.path("transactionId").asText(null);
+//			String transactionId = rootNode.path("transactionId").asText(null);
 			String gemsId = rootNode.path("gemsId").asText(null);
 
 			JsonNode employeeDetailsNode = rootNode.get("employeeDetails");
@@ -61,6 +62,7 @@ public class GemsStatusService {
 
 			Map<String, List<JsonNode>> groupedJsonData = new HashMap<>();
 			Map<String, byte[]> matchedPdfFiles = new HashMap<>();
+			String transactionId = null;
 			int matchedCount = 0;
 
 			for (JsonNode employee : employeeDetailsNode) {
@@ -113,6 +115,9 @@ public class GemsStatusService {
 				for (JsonNode event : eventDetailsNode) {
 					String eventId = event.path("eventId").asText(null);
 					String eventName = event.path("eventName").asText(null);
+
+					DateTimeFormatter date = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+					transactionId = LocalDateTime.now().format(date);
 
 					HrmsStatusUpdate newRecord = new HrmsStatusUpdate();
 					newRecord.setTransactionId(transactionId);
