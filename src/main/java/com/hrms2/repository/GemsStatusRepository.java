@@ -23,4 +23,7 @@ public interface GemsStatusRepository extends JpaRepository<HrmsStatusUpdate, Lo
 	@Transactional
 	@Query("UPDATE HrmsStatusUpdate h SET h.jsonSentDate = :jsonSentDate WHERE h.fileId IN :fileIds")
 	void updateJsonSentDate(@Param("fileIds") List<String> fileIds, @Param("jsonSentDate") LocalDateTime jsonSentDate);
+
+	@Query("SELECT h.transactionId FROM HrmsStatusUpdate h WHERE h.geNumber = :geNumber AND h.eventId = :eventId ORDER BY h.createdAt DESC")
+	String findTransactionIdByGeNumberAndEventId(@Param("geNumber") String geNumber, @Param("eventId") String eventId);
 }

@@ -82,8 +82,9 @@ public class GemsStatusService {
 				}
 
 				boolean alreadyProcessed = false;
+				String eventId = null;
 				for (JsonNode event : eventDetailsNode) {
-					String eventId = event.path("eventId").asText(null);
+					eventId = event.path("eventId").asText(null);
 					String eventName = event.path("eventName").asText(null);
 
 					if (geNumber == null || eventId == null || eventName == null || fileId == null
@@ -112,8 +113,17 @@ public class GemsStatusService {
 
 				matchedPdfFiles.put(fileName, exactPdfContent);
 
+				// Fetch oldTransactionId from DB based on eventId
+				String oldTransactionId = repository.findTransactionIdByGeNumberAndEventId(geNumber, eventId);
+
+				// Create a new JSON Object for the employee
+				ObjectNode employeeJson = (ObjectNode) objectMapper.readTree(employee.toString());
+				employeeJson.put("oldTransactionId", oldTransactionId);
+				employeeJson.put("comments",
+						"Reprocessed due to data corrections identified by the user. A new PDF has been generated; please use the updated PDF.");
+
 				for (JsonNode event : eventDetailsNode) {
-					String eventId = event.path("eventId").asText(null);
+					eventId = event.path("eventId").asText(null);
 					String eventName = event.path("eventName").asText(null);
 
 					DateTimeFormatter date = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
