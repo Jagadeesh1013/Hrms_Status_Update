@@ -3,7 +3,9 @@ package com.hrms2.config;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Map;
+import java.util.Properties;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +14,6 @@ import org.springframework.stereotype.Component;
 
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import com.jcraft.jsch.SftpATTRS;
 import com.jcraft.jsch.SftpException;
@@ -49,145 +50,190 @@ public class SftpFileService {
 	@Value("${sftp.hrms.password}")
 	private String hrmsSftpPassword;
 
-	private Session session;
-	private ChannelSftp channelSftp;
-
-	private void connect() throws JSchException {
-		if (session == null || !session.isConnected()) {
-			JSch jsch = new JSch();
-			session = jsch.getSession(sftpUser, sftpHost, sftpPort);
-			session.setPassword(sftpPassword);
-			session.setConfig("StrictHostKeyChecking", "no");
-			session.connect();
-		}
-		if (channelSftp == null || !channelSftp.isConnected()) {
-			channelSftp = (ChannelSftp) session.openChannel("sftp");
-			channelSftp.connect();
-			logger.info("SFTP session established successfully.");
-		}
-	}
-
-	public void disconnect() {
-		if (channelSftp != null && channelSftp.isConnected()) {
-			channelSftp.disconnect();
-		}
-		if (session != null && session.isConnected()) {
-			session.disconnect();
-		}
-		logger.info("SFTP session closed.");
-	}
-
-	public byte[] getExactPdfFile(String fileName) throws IOException {
-		byte[] fileContent = null;
+	/**
+	 * Opens a new SFTP session and returns an active ChannelSftp instance.
+	 */
+	public ChannelSftp openAgSftpSession() {
 		try {
-			connect(); // Ensure SFTP connection is established
+			JSch jsch = new JSch();
+			Session session = jsch.getSession(sftpUser, sftpHost, sftpPort);
+			session.setPassword(sftpPassword);
 
+			// Set session configurations
+			Properties config = new Properties();
+			config.put("StrictHostKeyChecking", "no");
+			session.setConfig(config);
+			session.connect();
+
+			logger.info("✅ AG SFTP Session connected successfully.");
+
+			ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
+			channelSftp.connect();
+			logger.info("✅ AG SFTP Channel opened successfully.");
+
+			return channelSftp;
+		} catch (Exception e) {
+			logger.error("❌ Failed to open AG SFTP session: {}", e.getMessage());
+			return null;
+		}
+	}
+
+	public ChannelSftp openHrmsSftpSession() {
+		try {
+			JSch jsch = new JSch();
+			Session session = jsch.getSession(hrmsSftpUser, hrmsSftpHost, hrmsSftpPort);
+			session.setPassword(hrmsSftpPassword);
+
+			// Set session configurations
+			Properties config = new Properties();
+			config.put("StrictHostKeyChecking", "no");
+			session.setConfig(config);
+			session.connect();
+
+			logger.info("✅ HRMS SFTP Session connected successfully.");
+
+			ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
+			channelSftp.connect();
+			logger.info("✅ HRMS SFTP Channel opened successfully.");
+
+			return channelSftp;
+		} catch (Exception e) {
+			logger.error("❌ Failed to open HRMS SFTP session: {}", e.getMessage());
+			return null;
+		}
+	}
+
+	/**
+	 * Closes the SFTP session and channel.
+	 */
+	public void closeAgSftpSession(ChannelSftp channelSftp) {
+		if (channelSftp != null) {
+			try {
+				if (channelSftp.isConnected()) {
+					channelSftp.disconnect();
+					logger.info("✅ AG SFTP Channel disconnected.");
+				}
+				if (channelSftp.getSession().isConnected()) {
+					channelSftp.getSession().disconnect();
+					logger.info("✅ AG SFTP Session disconnected.");
+				}
+			} catch (Exception e) {
+				logger.error("❌ Error closing AG SFTP session: {}", e.getMessage());
+			}
+		}
+	}
+
+	public void closeHrmsSftpSession(ChannelSftp channelSftp) {
+		if (channelSftp != null) {
+			try {
+				if (channelSftp.isConnected()) {
+					channelSftp.disconnect();
+					logger.info("✅ HRMS SFTP Channel disconnected.");
+				}
+				if (channelSftp.getSession().isConnected()) {
+					channelSftp.getSession().disconnect();
+					logger.info("✅ HRMS SFTP Session disconnected.");
+				}
+			} catch (Exception e) {
+				logger.error("❌ Error closing HRMS SFTP session: {}", e.getMessage());
+			}
+		}
+	}
+
+	/**
+	 * Uploads multiple JSON files to the specified SFTP path.
+	 */
+	public boolean batchUploadJsonToSftp(ChannelSftp channelSftp, String targetPath,
+			Map<String, InputStream> jsonFilesStreamMap) {
+		try {
+			for (Map.Entry<String, InputStream> entry : jsonFilesStreamMap.entrySet()) {
+				String fileName = entry.getKey();
+				InputStream fileStream = entry.getValue();
+
+				channelSftp.put(fileStream, targetPath + "/" + fileName);
+				logger.info("✅ Uploaded JSON: {}", fileName);
+			}
+			return true;
+		} catch (Exception e) {
+			logger.error("❌ Failed to upload JSONs: {}", e.getMessage());
+			return false;
+		}
+	}
+
+	/**
+	 * Uploads multiple PDF files to the specified SFTP path.
+	 */
+	public boolean batchUploadPdfsToSftp(ChannelSftp channelSftp, String targetPath,
+			Map<String, InputStream> pdfFilesMap) {
+		try {
+			for (Map.Entry<String, InputStream> entry : pdfFilesMap.entrySet()) {
+				String fileName = entry.getKey();
+				InputStream fileStream = entry.getValue();
+
+				channelSftp.put(fileStream, targetPath + "/" + fileName);
+				logger.info("✅ Uploaded PDF: {}", fileName);
+			}
+			return true;
+		} catch (Exception e) {
+			logger.error("❌ Failed to upload PDFs: {}", e.getMessage());
+			return false;
+		}
+	}
+
+	public InputStream getExactPdfFileAsStream(ChannelSftp channelSftp, String fileName) {
+
+		byte[] fileBytes = null;
+		try {
+			// 🔹 Construct the target path dynamically (MM format for month)
 			String currentYear = String.valueOf(java.time.Year.now().getValue());
 			String currentMonth = java.time.Month.JANUARY.getDisplayName(java.time.format.TextStyle.SHORT,
 					java.util.Locale.ENGLISH);
 			String targetPath = sftpRemoteDirectory + "/" + currentYear + "/" + currentMonth + "/";
 
+			// 🔹 Change directory only if necessary
 			if (!channelSftp.pwd().equals(targetPath)) {
 				channelSftp.cd(targetPath);
 				logger.info("📂 Navigated to SFTP directory: {}", targetPath);
 			}
 
-			// Check if the file exists before attempting to read
+			// 🔹 Check if file exists
+			SftpATTRS attrs;
 			try {
-				SftpATTRS attrs = channelSftp.lstat(fileName);
-				if (attrs != null) {
-					logger.info("✅ File found: {} (Size: {} bytes)", fileName, attrs.getSize());
-
-					// Read file content
-					try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-						channelSftp.get(fileName, outputStream);
-						fileContent = outputStream.toByteArray();
-						logger.info("📄 Successfully retrieved PDF file: {}", fileName);
-					}
-				}
+				attrs = channelSftp.lstat(fileName);
 			} catch (SftpException e) {
-				if (e.id == ChannelSftp.SSH_FX_NO_SUCH_FILE) {
-					logger.warn("⚠️ File does not exist, skipping: {}", fileName);
-				} else {
-					logger.error("❌ Error retrieving file: {}", fileName, e);
+				logger.warn("⚠️ File not found: {}", fileName);
+				return null; // Simply return null (NO LOOPING)
+			}
+
+			// 🔹 Ensure file is NOT empty
+			if (attrs.getSize() == 0) {
+				logger.warn("⚠️ File exists but is empty: {}", fileName);
+				return null;
+			}
+
+			// 🔹 Read file into byte[]
+			try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+				channelSftp.get(fileName, outputStream);
+				fileBytes = outputStream.toByteArray();
+
+				if (fileBytes.length == 0) {
+					logger.warn("⚠️ Retrieved file is empty: {}", fileName);
+					return null;
 				}
+
+				logger.info("✅ Successfully retrieved PDF file: {} (Size: {} bytes)", fileName, fileBytes.length);
+
+				// 🔹 Convert byte[] to InputStream and return
+				return new ByteArrayInputStream(fileBytes);
 			}
 
 		} catch (SftpException e) {
-			logger.error("❌ Error accessing SFTP directory: {}", e.getMessage(), e);
-		} catch (JSchException e) {
-			logger.error("❌ SFTP connection error: {}", e.getMessage(), e);
-		}
-		return fileContent; // Returns null if file is missing
-	}
-
-	/**
-	 * Upload multiple files in a batch to the SFTP server.
-	 */
-	public boolean batchUploadFiles(String host, int port, String user, String password, String remotePath,
-			Map<String, byte[]> files) throws IOException {
-		boolean allFilesUploaded = true;
-
-		try {
-			connect(); // Establish SFTP connection
-
-			ensureDirectoryExists(remotePath);
-
-			for (Map.Entry<String, byte[]> entry : files.entrySet()) {
-				String fileName = entry.getKey();
-				byte[] fileData = entry.getValue();
-				try (ByteArrayInputStream inputStream = new ByteArrayInputStream(fileData)) {
-					channelSftp.put(inputStream, remotePath + "/" + fileName);
-					logger.info("✅ File uploaded: {}", fileName);
-				} catch (SftpException e) {
-					logger.error("❌ Failed to upload file: {}", fileName, e);
-					allFilesUploaded = false;
-				}
-			}
-		} catch (JSchException | SftpException e) {
-			logger.error("❌ Batch upload failed: {}", e.getMessage(), e);
-			allFilesUploaded = false;
+			logger.error("❌ SFTP error retrieving file {}: {}", fileName, e.getMessage(), e);
+		} catch (IOException e) {
+			logger.error("❌ IO error while reading file {}: {}", fileName, e.getMessage(), e);
 		}
 
-		return allFilesUploaded;
+		return null; // Return null if something goes wrong
 	}
 
-	/**
-	 * Upload files to AG SFTP.
-	 */
-	public boolean batchUploadFilesToAg(String remotePath, Map<String, byte[]> files) throws IOException {
-		return batchUploadFiles(sftpHost, sftpPort, sftpUser, sftpPassword, remotePath, files);
-	}
-
-	/**
-	 * Upload files to HRMS SFTP.
-	 */
-	public boolean batchUploadFilesToHrms(String remotePath, Map<String, byte[]> files) throws IOException {
-		return batchUploadFiles(hrmsSftpHost, hrmsSftpPort, hrmsSftpUser, hrmsSftpPassword, remotePath, files);
-	}
-
-	/**
-	 * Create an SFTP session.
-	 */
-	@SuppressWarnings("unused")
-	private Session createSftpSession(String host, int port, String user, String password) throws JSchException {
-		JSch jsch = new JSch();
-		Session session = jsch.getSession(user, host, port);
-		session.setPassword(password);
-		session.setConfig("StrictHostKeyChecking", "no");
-		logger.info("🔌 Establishing SFTP session with {}:{}...", host, port);
-		return session;
-	}
-
-	/**
-	 * Ensure that the directory exists on the SFTP server.
-	 */
-	private void ensureDirectoryExists(String remotePath) throws SftpException {
-		try {
-			channelSftp.cd(remotePath);
-		} catch (SftpException e) {
-			channelSftp.mkdir(remotePath);
-			channelSftp.cd(remotePath);
-		}
-	}
 }

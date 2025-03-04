@@ -1,8 +1,5 @@
 package com.hrms2.repository;
 
-import java.time.LocalDateTime;
-import java.util.List;
-
 import javax.transaction.Transactional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -21,8 +18,8 @@ public interface GemsStatusRepository extends JpaRepository<HrmsStatusUpdate, Lo
 
 	@Modifying
 	@Transactional
-	@Query("UPDATE HrmsStatusUpdate h SET h.jsonSentDate = :jsonSentDate WHERE h.fileId IN :fileIds")
-	void updateJsonSentDate(@Param("fileIds") List<String> fileIds, @Param("jsonSentDate") LocalDateTime jsonSentDate);
+	@Query("UPDATE HrmsStatusUpdate e SET e.jsonSentDate = CURRENT_TIMESTAMP WHERE e.transactionId = :transactionId")
+	int updateJsonSentDate(@Param("transactionId") String transactionId);
 
 	@Query("SELECT h.transactionId FROM HrmsStatusUpdate h WHERE h.geNumber = :geNumber AND h.eventId = :eventId ORDER BY h.createdAt DESC")
 	String findTransactionIdByGeNumberAndEventId(@Param("geNumber") String geNumber, @Param("eventId") String eventId);

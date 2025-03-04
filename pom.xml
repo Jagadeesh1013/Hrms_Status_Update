@@ -11,6 +11,7 @@
 	<groupId>com.hrms2</groupId>
 	<artifactId>Hrms_Status_Update</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
+	<packaging>war</packaging>
 	<name>Hrms_Status_Update</name>
 	<description>Spring Boot with Hrms Application</description>
 	<url />
@@ -37,6 +38,10 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-tomcat</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.postgresql</groupId>
